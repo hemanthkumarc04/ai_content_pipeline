@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-fp#ai))ofsw$zh(-1i=4#4$kqx#n2cdhe@%h-^*jp$kby__fv%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["vapourescent-nongeometric-tomika.ngrok-free.dev"]
 
 
 # Application definition
