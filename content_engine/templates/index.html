@@ -1,43 +1,183 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>AI Content Automator</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="AI-powered short-form video generator. Upload a background video, type your script, and let AI create stunning content.">
+    <title>AI Video Generator — Create Stunning Content</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
 </head>
-<body style="font-family: Arial, sans-serif; padding: 50px;">
 
-    <h1>🎬 AI Video Generator</h1>
-    <p>Upload your background video and type your script below.</p>
-    {% if message %}
-        <h3 style="color: blue;">{{ message }}</h3>
-    {% endif %}
+<body>
 
-    {% if video_url %}
-        <div style="margin-bottom: 30px; padding: 15px; border: 2px solid #28a745; border-radius: 8px; max-width: 450px;">
-            <h3>🎥 Your New Video is Ready!</h3>
-            
-            <video width="100%" controls>
-                <source src="{{ video_url }}" type="video/mp4">
-                Your browser does not support HTML video.
-            </video>
-            <br><br>
-            
-            <a href="{{ video_url }}" download="AI_Generated_Video.mp4" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
-                ⬇️ Download Video
-            </a>
+    <!-- Particle Background -->
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- Ambient Glow Blobs -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <div class="app-wrapper">
+
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="brand">
+                <div class="brand-icon">🎬</div>
+                <div class="brand-text">VideoAI Studio</div>
+            </div>
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                AI Engine Ready
+            </div>
         </div>
-    {% endif %}
 
-    <form action="" method="POST" enctype="multipart/form-data">
-        {% csrf_token %} <label><b>Video Script:</b></label><br>
-        <textarea name="script" rows="4" cols="50" placeholder="Type your funny dialogue here..."></textarea><br><br>
+        <!-- Hero -->
+        <div class="hero">
+            <h1>Create <span class="gradient-text">AI-Powered</span> Videos</h1>
+            <p class="subtitle">Upload your background footage, write your script, and let our AI engine generate
+                professional voiceovers and perfectly synced videos in seconds.</p>
+        </div>
 
-        <label><b>Background Video:</b></label><br>
-        <input type="file" name="background_video" accept="video/mp4"><br><br>
+        <!-- Message Banner -->
+        {% if message %}
+        <div id="message-banner" class="message-banner visible {{ message_type }}">
+            <span>{% if message_type == 'error' %}⚠️{% else %}✅{% endif %}</span>
+            <span id="message-text">{{ message }}</span>
+        </div>
+        {% else %}
+        <div id="message-banner" class="message-banner">
+            <span></span>
+            <span id="message-text"></span>
+        </div>
+        {% endif %}
 
-        <button type="submit" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; cursor: pointer;">
-            Generate Video
-        </button>
-    </form>
+        <!-- Main Card -->
+        <div class="main-card">
 
+            <!-- Form Content -->
+            <div id="form-content">
+                <form id="video-form" action="" method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <!-- Script Input -->
+                    <div class="script-group">
+                        <div class="section-label">
+                            <div class="icon">✍️</div>
+                            <span>Your Script</span>
+                        </div>
+                        <textarea id="script-input" name="script" class="script-textarea" rows="5" maxlength="1000"
+                            placeholder="Type your script here... e.g. &quot;Welcome to the future of content creation. Our AI technology transforms your ideas into stunning videos.&quot;"></textarea>
+                        <div id="char-counter" class="char-counter">0 / 1000</div>
+                    </div>
+
+                    <!-- Upload Zone -->
+                    <div class="upload-group">
+                        <div class="section-label">
+                            <div class="icon">🎥</div>
+                            <span>Background Video</span>
+                        </div>
+                        <div id="drop-zone" class="drop-zone">
+                            <div class="drop-zone-icon">☁️</div>
+                            <div class="drop-zone-text">
+                                <p><strong>Click to upload</strong> or drag & drop</p>
+                                <small>MP4 files supported • Max 100MB</small>
+                            </div>
+                        </div>
+                        <input type="file" id="file-input" name="background_video" accept="video/mp4"
+                            class="file-input-hidden">
+                        <div id="file-info" class="file-info">
+                            <span>📎</span>
+                            <span id="file-name" class="file-name"></span>
+                            <button type="button" id="remove-file" class="remove-file" title="Remove file">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button type="submit" id="generate-btn" class="generate-btn">
+                        <span class="btn-content">
+                            <span>⚡</span>
+                            <span>Generate Video</span>
+                        </span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Progress Overlay -->
+            <div id="progress-overlay" class="progress-overlay">
+                <div class="progress-ring">
+                    <svg width="80" height="80" viewBox="0 0 80 80">
+                        <defs>
+                            <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#8b5cf6" />
+                                <stop offset="100%" stop-color="#06b6d4" />
+                            </linearGradient>
+                        </defs>
+                        <circle class="ring-bg" cx="40" cy="40" r="36"></circle>
+                        <circle class="ring-fill" cx="40" cy="40" r="36"></circle>
+                    </svg>
+                    <div id="progress-pct" class="progress-percentage">0%</div>
+                </div>
+
+                <div class="progress-steps">
+                    <div class="progress-step" data-step="0">
+                        <div class="step-icon">
+                            <div class="spinner"></div>
+                        </div>
+                        <span>Uploading video…</span>
+                    </div>
+                    <div class="progress-step" data-step="1">
+                        <div class="step-icon">
+                            <div class="spinner"></div>
+                        </div>
+                        <span>Generating AI voiceover…</span>
+                    </div>
+                    <div class="progress-step" data-step="2">
+                        <div class="step-icon">
+                            <div class="spinner"></div>
+                        </div>
+                        <span>Rendering final video…</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Result Section -->
+        <div id="result-section" class="result-section {% if video_url %}visible{% endif %}">
+            <div class="result-card">
+                <div class="result-header">
+                    <h3>🎉 Your Video is Ready!</h3>
+                </div>
+                <div class="result-video-wrapper">
+                    <video id="result-video" class="result-video" controls>
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                <div class="result-actions">
+                    <a id="download-btn" class="download-btn" download="AI_Generated_Video.mp4">
+                        <span>⬇️</span> Download
+                    </a>
+                    <button id="new-video-btn" class="new-video-btn" type="button">
+                        <span>🔄</span> Create Another
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Built with ❤️ using Django, MoviePy & ElevenLabs AI</p>
+        </div>
+
+    </div>
+
+    <script src="{% static 'js/app.js' %}"></script>
 </body>
+
 </html>
