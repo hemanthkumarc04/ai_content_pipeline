@@ -1,30 +1,33 @@
 from django.shortcuts import render
 from django.core.files.storage import FileSystemStorage
+from .generator import build_video # <-- Import your new engine here!
 
 def home_page(request):
-    # Check if the user just clicked the "Generate Video" button
     if request.method == 'POST':
-        # 1. Catch the text script
         script_text = request.POST.get('script')
-        
-        # 2. Catch the uploaded background video
         uploaded_video = request.FILES.get('background_video')
         
-        # 3. If both were provided, let's save the video temporarily
         if script_text and uploaded_video:
             fs = FileSystemStorage()
-            # This saves the file into your media folder
             filename = fs.save(uploaded_video.name, uploaded_video)
             
-            # Let's print it to the terminal to prove it worked!
-            print("====================================")
-            print("🎉 SUCCESS! Received your script:")
-            print(script_text)
-            print("📁 Saved background video as:", filename)
-            print("====================================")
+            # Get the exact file path on your computer
+            video_path = fs.path(filename)
             
-            # Send a success message back to the web page
-            return render(request, 'index.html', {'message': 'Data received successfully! Check your VS Code terminal.'})
+            print("⏳ Sending video to MoviePy for processing...")
             
-    # If they are just visiting the page normally, show the empty form
+            # ---> Trigger the video engine! <---
+            final_video_name = build_video(video_path, script_text)
+            
+            if final_video_name:
+                message = "✅ Video processed successfully!"
+                # Create the web link to the video
+                video_url = f"/media/{final_video_name}" 
+                
+                # Send BOTH the message and the video link to the HTML
+                return render(request, 'index.html', {'message': message, 'video_url': video_url})
+            else:
+                message = "❌ Something went wrong during processing."
+                return render(request, 'index.html', {'message': message})
+        
     return render(request, 'index.html')

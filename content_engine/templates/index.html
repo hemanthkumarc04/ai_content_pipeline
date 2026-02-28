@@ -11,6 +11,22 @@
         <h3 style="color: blue;">{{ message }}</h3>
     {% endif %}
 
+    {% if video_url %}
+        <div style="margin-bottom: 30px; padding: 15px; border: 2px solid #28a745; border-radius: 8px; max-width: 450px;">
+            <h3>🎥 Your New Video is Ready!</h3>
+            
+            <video width="100%" controls>
+                <source src="{{ video_url }}" type="video/mp4">
+                Your browser does not support HTML video.
+            </video>
+            <br><br>
+            
+            <a href="{{ video_url }}" download="AI_Generated_Video.mp4" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
+                ⬇️ Download Video
+            </a>
+        </div>
+    {% endif %}
+
     <form action="" method="POST" enctype="multipart/form-data">
         {% csrf_token %} <label><b>Video Script:</b></label><br>
         <textarea name="script" rows="4" cols="50" placeholder="Type your funny dialogue here..."></textarea><br><br>
