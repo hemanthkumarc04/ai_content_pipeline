@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Content Automator</title>
+</head>
+<body style="font-family: Arial, sans-serif; padding: 50px;">
+
+    <h1>🎬 AI Video Generator</h1>
+    <p>Upload your background video and type your script below.</p>
+    {% if message %}
+        <h3 style="color: blue;">{{ message }}</h3>
+    {% endif %}
+
+    <form action="" method="POST" enctype="multipart/form-data">
+        {% csrf_token %} <label><b>Video Script:</b></label><br>
+        <textarea name="script" rows="4" cols="50" placeholder="Type your funny dialogue here..."></textarea><br><br>
+
+        <label><b>Background Video:</b></label><br>
+        <input type="file" name="background_video" accept="video/mp4"><br><br>
+
+        <button type="submit" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; cursor: pointer;">
+            Generate Video
+        </button>
+    </form>
+
+</body>
+</html>
