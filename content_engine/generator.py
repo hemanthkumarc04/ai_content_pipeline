@@ -15,7 +15,7 @@ def build_video(video_path, script_text):
         print("🗣️ Downloading Pro ElevenLabs Voiceover...")
         audio_path = os.path.join(media_folder, "temp_voice.mp3")
         
-        API_KEY = "sk_46e120cad19a8df9666fc66885e7509e4ff3e2fa595790fc"
+        API_KEY = "ADD_YOUR_API_KEY_OF_32_CHARACTERS"
         
         # UPDATED: Using "Adam" (The most reliable Pro voice)
         VOICE_ID = "pNInz6obpgDQGcFmaJgB" 
