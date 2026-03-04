@@ -1,6 +1,7 @@
 import os
 import requests
 from moviepy import VideoFileClip, AudioFileClip
+from dotenv import load_dotenv, find_dotenv, set_key
 
 def build_video(video_path, script_text):
     print("🎬 Pro AI Engine Started...")
@@ -15,7 +16,19 @@ def build_video(video_path, script_text):
         print("🗣️ Downloading Pro ElevenLabs Voiceover...")
         audio_path = os.path.join(media_folder, "temp_voice.mp3")
         
-        API_KEY = "ADD_YOUR_ELEVENLABS_API_KEY"
+        # Load API key from .env
+        def get_api_key():
+            env_path = find_dotenv()
+            if env_path:
+                load_dotenv(env_path)
+            else:
+                load_dotenv()
+            return os.getenv('API_KEY')
+
+        API_KEY = get_api_key()
+        if not API_KEY:
+            print("❌ API_KEY not found in .env. Use set_api_key() to add it.")
+            return None
         
         # UPDATED: Using "Adam" (The most reliable Pro voice)
         VOICE_ID = "pNInz6obpgDQGcFmaJgB" 
@@ -76,3 +89,30 @@ def build_video(video_path, script_text):
     except Exception as e:
         print(f"❌ Error during processing: {e}")
         return None
+
+
+def set_api_key(new_key, env_file=None):
+    """Update or create API_KEY in the project's .env file.
+
+    Args:
+        new_key (str): The API key value to write.
+        env_file (str, optional): Path to the .env file. If omitted, will try to
+            locate one with `find_dotenv()` or create `.env` at the project root.
+    Returns:
+        bool: True on success, False otherwise.
+    """
+    try:
+        if env_file is None:
+            env_file = find_dotenv()
+            if not env_file:
+                # create .env at project root
+                project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                env_file = os.path.join(project_root, '.env')
+                open(env_file, 'a').close()
+
+        set_key(env_file, 'API_KEY', new_key)
+        os.environ['API_KEY'] = new_key
+        load_dotenv(env_file, override=True)
+        return True
+    except Exception:
+        return False
