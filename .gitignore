@@ -3,3 +3,4 @@ env
 *.pyc
 *.mp4
 .env
+staticfiles/
