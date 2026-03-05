@@ -1,4 +1,5 @@
 import os
+import traceback
 import requests
 from moviepy import VideoFileClip, AudioFileClip
 from dotenv import load_dotenv, find_dotenv, set_key
@@ -6,7 +7,12 @@ from gtts import gTTS
 
 
 def _get_api_key():
-    """Load API_KEY from .env file."""
+    """Load API_KEY from environment variables (supports Render + .env)."""
+    # First check os.environ (set via Render Dashboard)
+    key = os.environ.get('API_KEY')
+    if key:
+        return key
+    # Fallback: try loading from .env file (local dev)
     env_path = find_dotenv()
     if env_path:
         load_dotenv(env_path)
@@ -113,6 +119,7 @@ def build_video(video_path, script_text):
 
     except Exception as e:
         print(f"❌ Error during processing: {e}")
+        traceback.print_exc()
         return None
 
 
