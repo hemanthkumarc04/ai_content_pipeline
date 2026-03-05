@@ -27,6 +27,5 @@ urlpatterns = [
     path('', content_views.home_page, name='home'),
 ]
 
-# Tell Django to serve media files when we are running locally
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files (uploaded + generated videos) in all environments
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
