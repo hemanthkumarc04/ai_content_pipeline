@@ -6,178 +6,226 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-        content="AI-powered short-form video generator. Upload a background video, type your script, and let AI create stunning content.">
-    <title>AI Video Generator — Create Stunning Content</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+        content="Pachbaale Creations AI Studio — Generate stunning AI-powered montage and promo videos with voiceover, music, and cinematic effects.">
+    <title>Pachbaale Creations AI Studio</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=2">
     <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍌</text></svg>">
 </head>
 
 <body>
 
-    <!-- Particle Background -->
+    <!-- ── Animated Background ────────────────────── -->
+    <div class="bg-animation">
+        <div class="bg-orb bg-orb--gold"></div>
+        <div class="bg-orb bg-orb--violet"></div>
+        <div class="bg-orb bg-orb--cyan"></div>
+    </div>
     <canvas id="particles-canvas"></canvas>
 
-    <!-- Ambient Glow Blobs -->
-    <div class="ambient-glow glow-1"></div>
-    <div class="ambient-glow glow-2"></div>
-    <div class="ambient-glow glow-3"></div>
+    <!-- ── Loading Overlay ────────────────────────── -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">🍌 AI Engine is creating magic...</div>
+        <div class="loading-progress">
+            <div class="loading-progress-bar"></div>
+        </div>
+        <div class="loading-subtext">Generating voiceover, stitching clips, rendering — this may take a minute.</div>
+    </div>
 
-    <div class="app-wrapper">
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="app-container">
 
-        <!-- Top Bar -->
-        <div class="top-bar">
+        <!-- ── Header / Nav ───────────────────────── -->
+        <header class="header">
             <div class="brand">
-                <div class="brand-icon">🎬</div>
-                <div class="brand-text">VideoAI Studio</div>
+                <img src="{% static 'images/banana_icon.png' %}" alt="Pachbaale Creations Logo" class="brand-logo">
+                <span class="brand-name">Pachbaale Creations AI Studio</span>
             </div>
-            <div class="status-badge">
-                <div class="status-dot"></div>
+            <div class="status-pill">
+                <span class="status-dot"></span>
                 AI Engine Ready
             </div>
+        </header>
+
+        <!-- ── Hero ───────────────────────────────── -->
+        <section class="hero">
+            <img src="{% static 'images/banana_logo.png' %}" alt="Pachbaale Creations" class="hero-logo">
+            <h1>Create <span class="highlight">AI&#8209;Powered</span> Videos</h1>
+            <p class="tagline">Upload footage or photos, type your script, and let our AI engine craft professional
+                voiceovers, cinematic motion, and perfectly synced videos&nbsp;in&nbsp;seconds.</p>
+        </section>
+
+        <!-- ── Feature Badges ─────────────────────── -->
+        <div class="features-row">
+            <div class="feature-badge"><span class="feat-icon">🗣️</span> AI Voiceover</div>
+            <div class="feature-badge"><span class="feat-icon">✂️</span> Smart Montage</div>
+            <div class="feature-badge"><span class="feat-icon">📸</span> Photo Animation</div>
+            <div class="feature-badge"><span class="feat-icon">🎵</span> Music Mixing</div>
         </div>
 
-        <!-- Hero -->
-        <div class="hero">
-            <h1>Create <span class="gradient-text">AI-Powered</span> Videos</h1>
-            <p class="subtitle">Upload your background footage, write your script, and let our AI engine generate
-                professional voiceovers and perfectly synced videos in seconds.</p>
-        </div>
-
-        <!-- Message Banner -->
-        {% if message %}
-        <div id="message-banner" class="message-banner visible {{ message_type }}">
-            <span>{% if message_type == 'error' %}⚠️{% else %}✅{% endif %}</span>
-            <span id="message-text">{{ message }}</span>
-        </div>
-        {% else %}
-        <div id="message-banner" class="message-banner">
-            <span></span>
-            <span id="message-text"></span>
+        <!-- ── Result Section (shown after generation) ── -->
+        {% if video_url %}
+        <div class="result-section">
+            <div class="result-card">
+                <h2 class="result-title">🎉 Your Video is Ready!</h2>
+                <p class="result-subtitle">{{ success_message }}</p>
+                <video class="result-video" controls autoplay>
+                    <source src="{{ video_url }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="result-actions">
+                    <a href="{{ video_url }}" download class="btn-download">
+                        <span>⬇️</span> Download MP4
+                    </a>
+                    <a href="/" class="btn-new">
+                        <span>🔄</span> Create Another
+                    </a>
+                </div>
+            </div>
         </div>
         {% endif %}
 
-        <!-- Main Card -->
-        <div class="main-card">
+        <!-- ── Error Alert ────────────────────────── -->
+        {% if error_message %}
+        <div class="alert-error">
+            <span class="alert-icon">⚠️</span>
+            <span class="alert-text">{{ error_message }}</span>
+        </div>
+        {% endif %}
 
-            <!-- Form Content -->
-            <div id="form-content">
-                <form id="video-form" action="" method="POST" enctype="multipart/form-data">
+        <!-- ── Mode Tabs ──────────────────────────── -->
+        <div class="mode-tabs">
+            <button class="mode-tab mode-tab--standard active" data-target="panel-standard">
+                <span class="tab-icon">✂️</span> Standard Engine
+            </button>
+            <button class="mode-tab mode-tab--promo" data-target="panel-promo">
+                <span class="tab-icon">📸</span> Promo Engine
+            </button>
+        </div>
+
+        <!-- ════════════════════════════════════════ -->
+        <!--  STANDARD ENGINE PANEL                   -->
+        <!-- ════════════════════════════════════════ -->
+        <div id="panel-standard" class="engine-panel active">
+            <div class="engine-card engine-card--standard">
+                <div class="card-header">
+                    <div class="card-icon card-icon--standard">✂️</div>
+                    <div>
+                        <div class="card-title">Montage Engine</div>
+                        <div class="card-subtitle">Upload multiple clips → AI stitches them with a voiceover</div>
+                    </div>
+                </div>
+
+                <form class="engine-form" method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
+                    <input type="hidden" name="action" value="standard">
 
-                    <!-- Script Input -->
-                    <div class="script-group">
-                        <div class="section-label">
-                            <div class="icon">✍️</div>
-                            <span>Your Script</span>
+                    <!-- Upload Videos -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span class="label-icon">🎥</span> Background Videos
+                        </label>
+                        <div class="upload-zone">
+                            <span class="upload-icon">☁️</span>
+                            <div class="upload-text"><strong>Click to upload</strong> or drag &amp; drop</div>
+                            <div class="upload-hint">MP4 files · Select multiple · Max 100 MB each</div>
+                            <input type="file" id="videoInput" name="videos" accept="video/mp4" multiple required>
                         </div>
-                        <textarea id="script-input" name="script" class="script-textarea" rows="5" maxlength="1000"
-                            placeholder="Type your script here... e.g. &quot;Welcome to the future of content creation. Our AI technology transforms your ideas into stunning videos.&quot;"></textarea>
-                        <div id="char-counter" class="char-counter">0 / 1000</div>
+                        <span id="videoBadge" class="file-badge" style="display:none">0 selected</span>
                     </div>
 
-                    <!-- Upload Zone -->
-                    <div class="upload-group">
-                        <div class="section-label">
-                            <div class="icon">🎥</div>
-                            <span>Background Video</span>
-                        </div>
-                        <div id="drop-zone" class="drop-zone">
-                            <div class="drop-zone-icon">☁️</div>
-                            <div class="drop-zone-text">
-                                <p><strong>Click to upload</strong> or drag & drop</p>
-                                <small>MP4 files supported • Max 100MB</small>
-                            </div>
-                        </div>
-                        <input type="file" id="file-input" name="background_video" accept="video/mp4"
-                            class="file-input-hidden">
-                        <div id="file-info" class="file-info">
-                            <span>📎</span>
-                            <span id="file-name" class="file-name"></span>
-                            <button type="button" id="remove-file" class="remove-file" title="Remove file">✕</button>
-                        </div>
+                    <!-- Script -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span class="label-icon">✍️</span> AI Script
+                        </label>
+                        <textarea class="form-textarea" name="script" rows="4" maxlength="1000" required
+                            placeholder="Type what the AI should say... e.g. &quot;Welcome to the future of content creation.&quot;"></textarea>
+                        <div class="char-count">0 / 1000</div>
                     </div>
 
-                    <!-- Generate Button -->
-                    <button type="submit" id="generate-btn" class="generate-btn">
-                        <span class="btn-content">
-                            <span>⚡</span>
-                            <span>Generate Video</span>
-                        </span>
+                    <!-- Submit -->
+                    <button type="submit" class="btn-generate btn-generate--standard">
+                        <span class="btn-icon">⚡</span> Generate Montage Video
                     </button>
                 </form>
             </div>
-
-            <!-- Progress Overlay -->
-            <div id="progress-overlay" class="progress-overlay">
-                <div class="progress-ring">
-                    <svg width="80" height="80" viewBox="0 0 80 80">
-                        <defs>
-                            <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#8b5cf6" />
-                                <stop offset="100%" stop-color="#06b6d4" />
-                            </linearGradient>
-                        </defs>
-                        <circle class="ring-bg" cx="40" cy="40" r="36"></circle>
-                        <circle class="ring-fill" cx="40" cy="40" r="36"></circle>
-                    </svg>
-                    <div id="progress-pct" class="progress-percentage">0%</div>
-                </div>
-
-                <div class="progress-steps">
-                    <div class="progress-step" data-step="0">
-                        <div class="step-icon">
-                            <div class="spinner"></div>
-                        </div>
-                        <span>Uploading video…</span>
-                    </div>
-                    <div class="progress-step" data-step="1">
-                        <div class="step-icon">
-                            <div class="spinner"></div>
-                        </div>
-                        <span>Generating AI voiceover…</span>
-                    </div>
-                    <div class="progress-step" data-step="2">
-                        <div class="step-icon">
-                            <div class="spinner"></div>
-                        </div>
-                        <span>Rendering final video…</span>
-                    </div>
-                </div>
-            </div>
-
         </div>
 
-        <!-- Result Section -->
-        <div id="result-section" class="result-section {% if video_url %}visible{% endif %}">
-            <div class="result-card">
-                <div class="result-header">
-                    <h3>🎉 Your Video is Ready!</h3>
+        <!-- ════════════════════════════════════════ -->
+        <!--  PROMO ENGINE PANEL                      -->
+        <!-- ════════════════════════════════════════ -->
+        <div id="panel-promo" class="engine-panel">
+            <div class="engine-card engine-card--promo">
+                <div class="card-header">
+                    <div class="card-icon card-icon--promo">📸</div>
+                    <div>
+                        <div class="card-title">Promo Engine</div>
+                        <div class="card-subtitle">Photos + background music → cinematic promo with AI voiceover</div>
+                    </div>
                 </div>
-                <div class="result-video-wrapper">
-                    <video id="result-video" class="result-video" controls>
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-                <div class="result-actions">
-                    <a id="download-btn" class="download-btn" download="AI_Generated_Video.mp4">
-                        <span>⬇️</span> Download
-                    </a>
-                    <button id="new-video-btn" class="new-video-btn" type="button">
-                        <span>🔄</span> Create Another
+
+                <form class="engine-form" method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="promo">
+
+                    <!-- Upload Photos -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span class="label-icon">📸</span> Product Photos
+                        </label>
+                        <div class="upload-zone">
+                            <span class="upload-icon">🖼️</span>
+                            <div class="upload-text"><strong>Click to upload</strong> or drag &amp; drop</div>
+                            <div class="upload-hint">JPG / PNG · Select multiple</div>
+                            <input type="file" id="photoInput" name="photos" accept="image/*" multiple required>
+                        </div>
+                        <span id="photoBadge" class="file-badge" style="display:none">0 selected</span>
+                    </div>
+
+                    <!-- Upload Music -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span class="label-icon">🎵</span> Background Music
+                        </label>
+                        <div class="upload-zone">
+                            <span class="upload-icon">🎶</span>
+                            <div class="upload-text"><strong>Choose an audio track</strong></div>
+                            <div class="upload-hint">MP3 or WAV</div>
+                            <input type="file" id="musicInput" name="music" accept="audio/*" required>
+                        </div>
+                        <span id="musicBadge" class="file-badge" style="display:none">0 selected</span>
+                    </div>
+
+                    <!-- Script -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span class="label-icon">📝</span> Commercial Script
+                        </label>
+                        <textarea class="form-textarea" name="script" rows="4" maxlength="1500" required
+                            placeholder="Type your marketing copy... e.g. &quot;Discover our premium collection — crafted with passion, designed for you.&quot;"></textarea>
+                        <div class="char-count">0 / 1500</div>
+                    </div>
+
+                    <!-- Submit -->
+                    <button type="submit" class="btn-generate btn-generate--promo">
+                        <span class="btn-icon">🚀</span> Generate Promo Video
                     </button>
-                </div>
+                </form>
             </div>
         </div>
 
-        <!-- Footer -->
-        <div class="footer">
-            <p>Built with ❤️ using Django, MoviePy & ElevenLabs AI</p>
-        </div>
+        <!-- ── Footer ─────────────────────────────── -->
+        <footer class="footer">
+            <p>Built with <span class="footer-heart">❤️</span> by
+                <a href="#">Pachbaale Creations</a> · Powered by Django, MoviePy &amp; ElevenLabs AI
+            </p>
+        </footer>
 
     </div>
 
-    <script src="{% static 'js/app.js' %}"></script>
+    <script src="{% static 'js/app.js' %}?v=2"></script>
 </body>
 
 </html>

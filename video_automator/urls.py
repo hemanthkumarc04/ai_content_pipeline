@@ -29,3 +29,7 @@ urlpatterns = [
 
 # Serve media files (uploaded + generated videos) in all environments
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Serve static files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
