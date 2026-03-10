@@ -8,14 +8,13 @@
     <meta name="description"
         content="Pachbaale Creations AI Studio — Generate stunning AI-powered montage and promo videos with voiceover, music, and cinematic effects.">
     <title>Pachbaale Creations AI Studio</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=3">
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍌</text></svg>">
 </head>
 
 <body>
 
-    <!-- ── Animated Background ────────────────────── -->
     <div class="bg-animation">
         <div class="bg-orb bg-orb--gold"></div>
         <div class="bg-orb bg-orb--violet"></div>
@@ -23,20 +22,17 @@
     </div>
     <canvas id="particles-canvas"></canvas>
 
-    <!-- ── Loading Overlay ────────────────────────── -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">🍌 AI Engine is creating magic...</div>
         <div class="loading-progress">
             <div class="loading-progress-bar"></div>
         </div>
-        <div class="loading-subtext">Generating voiceover, stitching clips, rendering — this may take a minute.</div>
+        <div class="loading-subtext">Translating, generating voiceover, and rendering subtitles...</div>
     </div>
 
-    <!-- ══════════════════════════════════════════════ -->
     <div class="app-container">
 
-        <!-- ── Header / Nav ───────────────────────── -->
         <header class="header">
             <div class="brand">
                 <img src="{% static 'images/banana_icon.png' %}" alt="Pachbaale Creations Logo" class="brand-logo">
@@ -44,49 +40,53 @@
             </div>
             <div class="status-pill">
                 <span class="status-dot"></span>
-                AI Engine Ready
+                AI Multilingual Engine Ready
             </div>
         </header>
 
-        <!-- ── Hero ───────────────────────────────── -->
         <section class="hero">
             <img src="{% static 'images/banana_logo.png' %}" alt="Pachbaale Creations" class="hero-logo">
             <h1>Create <span class="highlight">AI&#8209;Powered</span> Videos</h1>
-            <p class="tagline">Upload footage or photos, type your script, and let our AI engine craft professional
-                voiceovers, cinematic motion, and perfectly synced videos&nbsp;in&nbsp;seconds.</p>
+            <p class="tagline">Now with <b>Auto-Subtitles</b> and <b>Multilingual Translation</b>. Craft professional
+                content in any language with ease.</p>
         </section>
 
-        <!-- ── Feature Badges ─────────────────────── -->
+        <!-- Feature Badges -->
         <div class="features-row">
             <div class="feature-badge"><span class="feat-icon">🗣️</span> AI Voiceover</div>
             <div class="feature-badge"><span class="feat-icon">✂️</span> Smart Montage</div>
             <div class="feature-badge"><span class="feat-icon">📸</span> Photo Animation</div>
             <div class="feature-badge"><span class="feat-icon">🎵</span> Music Mixing</div>
+            <div class="feature-badge"><span class="feat-icon">🌐</span> Global Translation</div>
         </div>
 
-        <!-- ── Result Section (shown after generation) ── -->
         {% if video_url %}
         <div class="result-section">
             <div class="result-card">
                 <h2 class="result-title">🎉 Your Video is Ready!</h2>
                 <p class="result-subtitle">{{ success_message }}</p>
+
+                {% if translated_script %}
+                <details class="translation-details">
+                    <summary class="translation-summary">View Translated Script</summary>
+                    <div class="translation-content">
+                        {{ translated_script }}
+                    </div>
+                </details>
+                {% endif %}
+
                 <video class="result-video" controls autoplay>
                     <source src="{{ video_url }}" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="result-actions">
-                    <a href="{{ video_url }}" download class="btn-download">
-                        <span>⬇️</span> Download MP4
-                    </a>
-                    <a href="/" class="btn-new">
-                        <span>🔄</span> Create Another
-                    </a>
+                    <a href="{{ video_url }}" download class="btn-download"><span>⬇️</span> Download MP4</a>
+                    <a href="/" class="btn-new"><span>🔄</span> Create Another</a>
                 </div>
             </div>
         </div>
         {% endif %}
 
-        <!-- ── Error Alert ────────────────────────── -->
         {% if error_message %}
         <div class="alert-error">
             <span class="alert-icon">⚠️</span>
@@ -94,138 +94,169 @@
         </div>
         {% endif %}
 
-        <!-- ── Mode Tabs ──────────────────────────── -->
         <div class="mode-tabs">
             <button class="mode-tab mode-tab--standard active" data-target="panel-standard">
-                <span class="tab-icon">✂️</span> Standard Engine
+                <span class="tab-icon">✂️</span> Montage Engine
             </button>
             <button class="mode-tab mode-tab--promo" data-target="panel-promo">
                 <span class="tab-icon">📸</span> Promo Engine
             </button>
         </div>
 
-        <!-- ════════════════════════════════════════ -->
-        <!--  STANDARD ENGINE PANEL                   -->
-        <!-- ════════════════════════════════════════ -->
         <div id="panel-standard" class="engine-panel active">
             <div class="engine-card engine-card--standard">
-                <div class="card-header">
-                    <div class="card-icon card-icon--standard">✂️</div>
-                    <div>
-                        <div class="card-title">Montage Engine</div>
-                        <div class="card-subtitle">Upload multiple clips → AI stitches them with a voiceover</div>
-                    </div>
-                </div>
-
                 <form class="engine-form" method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="standard">
 
-                    <!-- Upload Videos -->
                     <div class="form-group">
-                        <label class="form-label">
-                            <span class="label-icon">🎥</span> Background Videos
-                        </label>
+                        <label class="form-label"><span class="label-icon">🎥</span> Background Videos</label>
                         <div class="upload-zone">
                             <span class="upload-icon">☁️</span>
-                            <div class="upload-text"><strong>Click to upload</strong> or drag &amp; drop</div>
-                            <div class="upload-hint">MP4 files · Select multiple · Max 100 MB each</div>
+                            <div class="upload-text"><strong>Click to upload</strong> or drag & drop</div>
+                            <div class="upload-hint">MP4 files · Multi-select enabled</div>
                             <input type="file" id="videoInput" name="videos" accept="video/mp4" multiple required>
                         </div>
                         <span id="videoBadge" class="file-badge" style="display:none">0 selected</span>
                     </div>
 
-                    <!-- Script -->
-                    <div class="form-group">
-                        <label class="form-label">
-                            <span class="label-icon">✍️</span> AI Script
-                        </label>
-                        <textarea class="form-textarea" name="script" rows="4" maxlength="1000" required
-                            placeholder="Type what the AI should say... e.g. &quot;Welcome to the future of content creation.&quot;"></textarea>
-                        <div class="char-count">0 / 1000</div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label class="form-label"><span class="label-icon">🎙️</span> Select AI Voice</label>
+                            <select name="voice" class="form-select">
+                                <option value="male">Adam (Professional Male)</option>
+                                <option value="female">Bella (Soft Female)</option>
+                            </select>
+                        </div>
+                        <div class="form-col">
+                            <label class="form-label"><span class="label-icon">🌐</span> Subtitle Language</label>
+                            <select name="language" class="form-select">
+                                <option value="en">English (Original)</option>
+                                <option value="hi">Hindi (हिंदी)</option>
+                                <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                                <option value="es">Spanish (Español)</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <!-- Submit -->
-                    <button type="submit" class="btn-generate btn-generate--standard">
-                        <span class="btn-icon">⚡</span> Generate Montage Video
+                    <div class="form-group">
+                        <div class="label-wrapper">
+                            <label class="form-label"><span class="label-icon">✍️</span> AI Script
+                                (Auto-Translated)</label>
+                            <span id="readingTimeStandard" class="reading-time">(Est: 0s video)</span>
+                        </div>
+                        <textarea class="form-textarea" id="scriptStandard" name="script" rows="4" maxlength="1000"
+                            required
+                            placeholder="Type in English... the AI will translate if a different language is selected."></textarea>
+                        <div class="char-counter">
+                            <span id="countStandard">0</span> / 1000
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-generate btn-generate--standard"
+                        onclick="document.getElementById('loadingOverlay').classList.add('visible')">
+                        <span class="btn-icon">⚡</span> Generate Multilingual Montage
                     </button>
                 </form>
             </div>
         </div>
 
-        <!-- ════════════════════════════════════════ -->
-        <!--  PROMO ENGINE PANEL                      -->
-        <!-- ════════════════════════════════════════ -->
         <div id="panel-promo" class="engine-panel">
             <div class="engine-card engine-card--promo">
-                <div class="card-header">
-                    <div class="card-icon card-icon--promo">📸</div>
-                    <div>
-                        <div class="card-title">Promo Engine</div>
-                        <div class="card-subtitle">Photos + background music → cinematic promo with AI voiceover</div>
-                    </div>
-                </div>
-
                 <form class="engine-form" method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="promo">
 
-                    <!-- Upload Photos -->
-                    <div class="form-group">
-                        <label class="form-label">
-                            <span class="label-icon">📸</span> Product Photos
-                        </label>
-                        <div class="upload-zone">
-                            <span class="upload-icon">🖼️</span>
-                            <div class="upload-text"><strong>Click to upload</strong> or drag &amp; drop</div>
-                            <div class="upload-hint">JPG / PNG · Select multiple</div>
-                            <input type="file" id="photoInput" name="photos" accept="image/*" multiple required>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label class="form-label"><span class="label-icon">📸</span> Photos</label>
+                            <div class="upload-zone">
+                                <span class="upload-icon">🖼️</span>
+                                <input type="file" id="photoInput" name="photos" accept="image/*" multiple required>
+                            </div>
+                            <span id="photoBadge" class="file-badge" style="display:none">0 selected</span>
                         </div>
-                        <span id="photoBadge" class="file-badge" style="display:none">0 selected</span>
-                    </div>
-
-                    <!-- Upload Music -->
-                    <div class="form-group">
-                        <label class="form-label">
-                            <span class="label-icon">🎵</span> Background Music
-                        </label>
-                        <div class="upload-zone">
-                            <span class="upload-icon">🎶</span>
-                            <div class="upload-text"><strong>Choose an audio track</strong></div>
-                            <div class="upload-hint">MP3 or WAV</div>
-                            <input type="file" id="musicInput" name="music" accept="audio/*" required>
+                        <div class="form-col">
+                            <label class="form-label"><span class="label-icon">🎵</span> Music</label>
+                            <div class="upload-zone">
+                                <span class="upload-icon">🎵</span>
+                                <input type="file" id="musicInput" name="music" accept="audio/*" required>
+                            </div>
+                            <span id="musicBadge" class="file-badge" style="display:none">0 selected</span>
                         </div>
-                        <span id="musicBadge" class="file-badge" style="display:none">0 selected</span>
                     </div>
 
-                    <!-- Script -->
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label class="form-label"><span class="label-icon">🎙️</span> AI Voice</label>
+                            <select name="voice" class="form-select">
+                                <option value="male">Adam (Professional Male)</option>
+                                <option value="female">Bella (Soft Female)</option>
+                            </select>
+                        </div>
+                        <div class="form-col">
+                            <label class="form-label"><span class="label-icon">🌐</span> Audio Language</label>
+                            <select name="language" class="form-select">
+                                <option value="en">English (Original)</option>
+                                <option value="hi">Hindi (हिंदी)</option>
+                                <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="form-group">
-                        <label class="form-label">
-                            <span class="label-icon">📝</span> Commercial Script
-                        </label>
-                        <textarea class="form-textarea" name="script" rows="4" maxlength="1500" required
-                            placeholder="Type your marketing copy... e.g. &quot;Discover our premium collection — crafted with passion, designed for you.&quot;"></textarea>
-                        <div class="char-count">0 / 1500</div>
+                        <div class="label-wrapper">
+                            <label class="form-label"><span class="label-icon">📝</span> Commercial Copy</label>
+                            <span id="readingTimePromo" class="reading-time">(Est: 0s video)</span>
+                        </div>
+                        <textarea class="form-textarea" id="scriptPromo" name="script" rows="4" maxlength="1500"
+                            required placeholder="Describe your product..."></textarea>
+                        <div class="char-counter">
+                            <span id="countPromo">0</span> / 1500
+                        </div>
                     </div>
 
-                    <!-- Submit -->
-                    <button type="submit" class="btn-generate btn-generate--promo">
-                        <span class="btn-icon">🚀</span> Generate Promo Video
+                    <button type="submit" class="btn-generate btn-generate--promo"
+                        onclick="document.getElementById('loadingOverlay').classList.add('visible')">
+                        <span class="btn-icon">🚀</span> Generate Promo
                     </button>
                 </form>
             </div>
         </div>
 
-        <!-- ── Footer ─────────────────────────────── -->
         <footer class="footer">
-            <p>Built with <span class="footer-heart">❤️</span> by
-                <a href="#">Pachbaale Creations</a> · Powered by Django, MoviePy &amp; ElevenLabs AI
-            </p>
+            <p>Built with <span class="footer-heart">❤️</span> by <a href="#">Pachbaale Creations</a></p>
         </footer>
 
     </div>
 
-    <script src="{% static 'js/app.js' %}?v=2"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const setupCounter = (textareaId, counterId, timeId) => {
+                const textarea = document.getElementById(textareaId);
+                const counter = document.getElementById(counterId);
+                const timeDisplay = document.getElementById(timeId);
+                if (!textarea) return;
+
+                textarea.addEventListener('input', () => {
+                    const length = textarea.value.length;
+                    counter.innerText = length;
+                    const words = textarea.value.trim().split(/\s+/).filter(w => w.length > 0).length;
+                    const estSeconds = Math.ceil(words / 2.2); // AI speaks slightly slower for clarity
+                    timeDisplay.innerText = length > 0 ? `(Est: ${estSeconds}s video)` : `(Est: 0s video)`;
+
+                    if (length > parseInt(textarea.getAttribute('maxlength')) * 0.9) {
+                        counter.style.color = "var(--accent-rose)";
+                    } else {
+                        counter.style.color = "inherit";
+                    }
+                });
+            };
+            setupCounter('scriptStandard', 'countStandard', 'readingTimeStandard');
+            setupCounter('scriptPromo', 'countPromo', 'readingTimePromo');
+        });
+    </script>
+    <script src="{% static 'js/app.js' %}?v=3"></script>
 </body>
 
 </html>
