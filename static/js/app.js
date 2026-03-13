@@ -134,9 +134,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }, observerOptions);
 
     document.querySelectorAll('.engine-card, .result-section').forEach(el => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(20px)';
-        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        observer.observe(el);
+        // Set initial state that works even if JS is slow or fails
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+        
+        try {
+            // Apply animations only if supported and working
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(el);
+        } catch (err) {
+            console.warn("Scroll animation failed to initialize for element:", el, err);
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        }
     });
 });
