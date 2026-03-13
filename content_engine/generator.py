@@ -109,10 +109,22 @@ def _create_subtitle_image(text, video_width, duration, lang='en'):
         elif lang == 'ta':
             font = ImageFont.truetype(os.path.join(current_dir, "NotoSansTamil-Bold.ttf"), font_size)
         elif lang in ['hi', 'te', 'ml']:
-            font = ImageFont.truetype(r"C:\Windows\Fonts\nirmala.ttf", font_size)
+            # Try Windows font first, then fall back to default
+            nirmala = r"C:\Windows\Fonts\nirmala.ttf"
+            if os.path.exists(nirmala):
+                font = ImageFont.truetype(nirmala, font_size)
+            else:
+                font = ImageFont.load_default()
         else:
-            # New modern font
-            font = ImageFont.truetype(r"C:\Windows\Fonts\segoeui.ttf", font_size)
+            # Try bundled Google Sans, then Windows font, then default
+            sans = os.path.join(current_dir, "Google_Sans_Flex", "static", "GoogleSansFlex_36pt-Bold.ttf")
+            segoe = r"C:\Windows\Fonts\segoeui.ttf"
+            if os.path.exists(sans):
+                font = ImageFont.truetype(sans, font_size)
+            elif os.path.exists(segoe):
+                font = ImageFont.truetype(segoe, font_size)
+            else:
+                font = ImageFont.load_default()
     except:
         font = ImageFont.load_default()
 
