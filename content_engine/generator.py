@@ -34,8 +34,8 @@ def _tts_elevenlabs(script_text, audio_path, voice_choice='male'):
         print("⚠️ API_KEY not found — skipping ElevenLabs.")
         return False
 
-    # Adam = male, Bella = female
-    VOICE_ID = "pNInz6obpgDQGcFmaJgB" if voice_choice == 'male' else "EXAVITQu4vr4PUHQRBy1"
+    # Adam = male, Bella = female (Corrected Bella Voice ID)
+    VOICE_ID = "pNInz6obpgDQGcFmaJgB" if voice_choice == 'male' else "EXAVITQu4vr4xnSDxMaL"
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
 
     headers = {
@@ -45,7 +45,7 @@ def _tts_elevenlabs(script_text, audio_path, voice_choice='male'):
     }
     data = {
         "text": script_text,
-        "model_id": "eleven_v3", # Upgraded to V3 for Kannada/Tamil support
+        "model_id": "eleven_v3", # V3 is the correct model for 70+ languages including Kannada/Tamil
         "voice_settings": {"stability": 0.45, "similarity_boost": 0.8},
     }
 
@@ -93,80 +93,105 @@ def set_api_key(new_key, env_file=None):
 # ─── PURE PYTHON SUBTITLE ENGINE (No ImageMagick Required) ────────────────────
 
 def _create_subtitle_image(text, video_width, duration, lang='en'):
-    """Creates a transparent PNG image, routing to bundled Google Fonts for Indian scripts."""
-    # Increased canvas height to 200 to accommodate larger fonts
-    img = Image.new('RGBA', (int(video_width), 200), (0, 0, 0, 0))
+    """Creates subtitle image using Pillow with controlled size."""
+
+    canvas_height = 120   # smaller subtitle box
+    img = Image.new('RGBA', (int(video_width), canvas_height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    
-    font_size = 75  # 🚀 MASSIVE SIZE INCREASE
+
+    font_size = 40   # reduced from 75 → 40
+
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
+
     try:
         if lang == 'kn':
             font = ImageFont.truetype(os.path.join(current_dir, "NotoSansKannada-Bold.ttf"), font_size)
         elif lang == 'ta':
             font = ImageFont.truetype(os.path.join(current_dir, "NotoSansTamil-Bold.ttf"), font_size)
         elif lang in ['hi', 'te', 'ml']:
-            # Absolute path to Windows Native Indian Font
             font = ImageFont.truetype(r"C:\Windows\Fonts\nirmala.ttf", font_size)
         else:
-            # Absolute path to Windows Native Latin Font
-            font = ImageFont.truetype(r"C:\Windows\Fonts\arialbd.ttf", font_size)
-    except Exception as e:
-        # If you see this in your terminal, your font files are missing!
-        print(f"\n❌ FATAL FONT ERROR: {e}")
-        print("❌ FALLING BACK TO 11px DEFAULT. TEXT WILL BE TINY.\n")
+            # New modern font
+            font = ImageFont.truetype(r"C:\Windows\Fonts\segoeui.ttf", font_size)
+    except:
         font = ImageFont.load_default()
 
-    # Smart math to center the text perfectly
-    text_bbox = draw.textbbox((0, 0), text, font=font)
-    text_w = text_bbox[2] - text_bbox[0]
-    text_h = text_bbox[3] - text_bbox[1]
-    
-    x = (video_width - text_w) / 2
-    y = (200 - text_h) / 2 # Center vertically in the new 200px canvas
+    # Limit subtitle width
+    max_width = int(video_width * 0.8)
 
-    # Draw a thicker black outline for the larger text
-    outline_color = (0, 0, 0, 255)
-    for offset_x in [-3, -2, 2, 3]:
-        for offset_y in [-3, -2, 2, 3]:
-            draw.text((x + offset_x, y + offset_y), text, font=font, fill=outline_color)
-    
-    # Draw the main yellow text
-    draw.text((x, y), text, font=font, fill=(255, 255, 0, 255))
-    
+    # Wrap text if too long
+    words = text.split()
+    lines = []
+    line = ""
+
+    for word in words:
+        test_line = f"{line} {word}".strip()
+        bbox = draw.textbbox((0, 0), test_line, font=font)
+        width = bbox[2] - bbox[0]
+
+        if width <= max_width:
+            line = test_line
+        else:
+            lines.append(line)
+            line = word
+
+    lines.append(line)
+
+    total_text_height = len(lines) * (font_size + 5)
+    y = (canvas_height - total_text_height) / 2
+
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        text_w = bbox[2] - bbox[0]
+        x = (video_width - text_w) / 2
+
+        # outline
+        for ox in [-2, 2]:
+            for oy in [-2, 2]:
+                draw.text((x+ox, y+oy), line, font=font, fill=(0,0,0,255))
+
+        draw.text((x, y), line, font=font, fill=(255,255,255,255))
+
+        y += font_size + 5
+
     img_array = np.array(img)
+
     return ImageClip(img_array).with_duration(duration)
 
 def _create_subtitle_clips(text, duration, video_w, video_h, lang='en'):
-    """Splits text into chunks and converts them into timed Pillow ImageClips."""
-    words = text.split()
-    if not words:
+    """Create subtitle clips from text."""
+
+    # Split by sentence (better than 5 word chunks)
+    chunks = [s.strip() for s in text.split('.') if s.strip()]
+
+    if not chunks:
         return []
-        
-    chunks = []
-    chunk = []
-    for word in words:
-        chunk.append(word)
-        if len(chunk) >= 5:
-            chunks.append(" ".join(chunk))
-            chunk = []
-    if chunk:
-        chunks.append(" ".join(chunk))
-        
-    time_per_chunk = duration / max(1, len(chunks))
-    
+
+    time_per_chunk = duration / len(chunks)
+
     subs = []
     current_time = 0
-    for chunk_text in chunks:
-        # Pass the language down to the image creator
-        txt_clip = _create_subtitle_image(chunk_text, video_w, time_per_chunk, lang)
-        txt_clip = txt_clip.with_start(current_time).with_position(('center', int(video_h * 0.8)))
-        subs.append(txt_clip)
-        current_time += time_per_chunk
-        
-    return subs
 
+    for chunk_text in chunks:
+
+        txt_clip = _create_subtitle_image(
+            chunk_text,
+            video_w,
+            time_per_chunk,
+            lang
+        )
+
+        txt_clip = (
+            txt_clip
+            .with_start(current_time)
+            .with_position(('center', video_h - 140))
+        )
+
+        subs.append(txt_clip)
+
+        current_time += time_per_chunk
+
+    return subs
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _loop_video_to_duration(video_clip, target_duration):
@@ -222,7 +247,9 @@ def build_video(video_paths, script_text, voice_choice='male', lang='en'):
         subtitle_clips = _create_subtitle_clips(script_text, total_audio_duration, stitched_video.w, stitched_video.h, lang)
         if subtitle_clips:
             print(f"📝 Adding {len(subtitle_clips)} dynamic subtitle chunks overlay...")
-            final_video = CompositeVideoClip([stitched_video] + subtitle_clips).with_audio(voice_clip)
+            final_video = CompositeVideoClip(
+    [stitched_video] + subtitle_clips
+).with_audio(voice_clip).with_duration(total_audio_duration)
         else:
             final_video = stitched_video.with_audio(voice_clip).with_duration(total_audio_duration)
 
