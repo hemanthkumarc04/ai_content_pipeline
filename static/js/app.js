@@ -134,20 +134,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }, observerOptions);
 
     document.querySelectorAll('.engine-card, .result-section').forEach(el => {
-        // Set initial state that works even if JS is slow or fails
+        // Ensure element is visible by default
         el.style.opacity = '1';
         el.style.transform = 'translateY(0)';
         
         try {
-            // Apply animations only if supported and working
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(20px)';
-            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-            observer.observe(el);
+            // Only attempt animation if IntersectionObserver is supported
+            if ('IntersectionObserver' in window) {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            }
         } catch (err) {
-            console.warn("Scroll animation failed to initialize for element:", el, err);
+            console.error("Scroll animation error:", err);
             el.style.opacity = '1';
             el.style.transform = 'translateY(0)';
         }
     });
+    console.log("🚀 Pachbaale Studio JS Loaded Successfully");
 });

@@ -19,10 +19,7 @@ ENV/
 .env
 .env.*
 *.env
-<<<<<<< HEAD
-=======
 !.env.example
->>>>>>> b83beb74479bf6366cd0ff19a82b843db28e52ba
 
 # --- Django ---
 db.sqlite3
