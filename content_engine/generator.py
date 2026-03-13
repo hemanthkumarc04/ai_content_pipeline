@@ -2,52 +2,21 @@ import os
 import glob
 import traceback
 import requests
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 from moviepy import (
     VideoFileClip, AudioFileClip, ImageClip,
-    concatenate_videoclips, CompositeAudioClip, CompositeVideoClip, TextClip
+    concatenate_videoclips, CompositeAudioClip, CompositeVideoClip
 )
 from dotenv import load_dotenv, find_dotenv, set_key
 from gtts import gTTS
 
-# ─── ImageMagick Auto-Detection ────────────────────────────────────────────────
-# Searches for any installed ImageMagick version automatically on Windows.
-def _find_imagemagick():
-    search_patterns = [
-        r"C:\Program Files\ImageMagick*\magick.exe",
-        r"C:\Program Files (x86)\ImageMagick*\magick.exe",
-    ]
-    for pattern in search_patterns:
-        matches = glob.glob(pattern)
-        if matches:
-            return matches[0]
-    return None
-
-_im_path = _find_imagemagick()
-if _im_path:
-    os.environ["IMAGEMAGICK_BINARY"] = _im_path
-    print(f"✅ ImageMagick found: {_im_path}")
-else:
-    print("⚠️  ImageMagick not found — subtitle TextClip will be skipped.")
-
 # Map UI language codes → gTTS language codes
 GTTS_LANG_MAP = {
-    'en': 'en',
-    'hi': 'hi',
-    'kn': 'kn',
-    'es': 'es',
-    'fr': 'fr',
-    'de': 'de',
-    'it': 'it',
-    'pt': 'pt',
-    'ru': 'ru',
-    'ja': 'ja',
-    'ko': 'ko',
-    'zh': 'zh-CN',
-    'ta': 'ta',
-    'te': 'te',
-    'ml': 'ml',
+    'en': 'en', 'hi': 'hi', 'kn': 'kn', 'es': 'es', 'fr': 'fr',
+    'de': 'de', 'it': 'it', 'pt': 'pt', 'ru': 'ru', 'ja': 'ja',
+    'ko': 'ko', 'zh': 'zh-CN', 'ta': 'ta', 'te': 'te', 'ml': 'ml',
 }
-
 
 def _get_api_key():
     """Load API_KEY from environment variables (supports Render + .env)."""
@@ -59,16 +28,15 @@ def _get_api_key():
         load_dotenv(env_path)
     return os.getenv('API_KEY')
 
-
 def _tts_elevenlabs(script_text, audio_path, voice_choice='male'):
-    """Generates audio via ElevenLabs — Adam (male) or Bella (female)."""
+    """Generates audio via ElevenLabs using the V3 model for regional Indian languages."""
     API_KEY = _get_api_key()
     if not API_KEY:
         print("⚠️ API_KEY not found — skipping ElevenLabs.")
         return False
 
-    # Adam = male, Bella = female
-    VOICE_ID = "pNInz6obpgDQGcFmaJgB" if voice_choice == 'male' else "EXAVITQu4vr4PUHQRBy1"
+    # Adam = male, Bella = female (Corrected Bella Voice ID)
+    VOICE_ID = "pNInz6obpgDQGcFmaJgB" if voice_choice == 'male' else "EXAVITQu4vr4xnSDxMaL"
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
 
     headers = {
@@ -78,7 +46,7 @@ def _tts_elevenlabs(script_text, audio_path, voice_choice='male'):
     }
     data = {
         "text": script_text,
-        "model_id": "eleven_multilingual_v2",
+        "model_id": "eleven_v3", # V3 is the correct model for 70+ languages including Kannada/Tamil
         "voice_settings": {"stability": 0.45, "similarity_boost": 0.8},
     }
 
@@ -95,7 +63,6 @@ def _tts_elevenlabs(script_text, audio_path, voice_choice='male'):
         print(f"⚠️ ElevenLabs request failed: {e}")
         return False
 
-
 def _tts_gtts(script_text, audio_path, lang='en'):
     """Fallback TTS using Google gTTS. Supports multilingual output."""
     try:
@@ -107,7 +74,6 @@ def _tts_gtts(script_text, audio_path, lang='en'):
     except Exception as e:
         print(f"❌ gTTS also failed: {e}")
         return False
-
 
 def set_api_key(new_key, env_file=None):
     """Update or create API_KEY in the project's .env file."""
@@ -125,56 +91,121 @@ def set_api_key(new_key, env_file=None):
     except Exception:
         return False
 
+# ─── PURE PYTHON SUBTITLE ENGINE (No ImageMagick Required) ────────────────────
 
-def _create_subtitle_clips(text, duration, video_w, video_h):
-    """
-    Safely creates a sequence of subtitle TextClips synchronized roughly to the audio.
-    Returns an empty list if ImageMagick is missing or creation fails.
-    """
-    if not os.environ.get("IMAGEMAGICK_BINARY"):
-        print("⚠️ Skipping subtitles — ImageMagick not configured.")
-        return []
-    
+def _create_subtitle_image(text, video_width, duration, lang='en'):
+    """Creates subtitle image using Pillow with controlled size."""
+
+    canvas_height = 120   # smaller subtitle box
+    img = Image.new('RGBA', (int(video_width), canvas_height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    font_size = 40   # reduced from 75 → 40
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    try:
+        if lang == 'kn':
+            font = ImageFont.truetype(os.path.join(current_dir, "NotoSansKannada-Bold.ttf"), font_size)
+        elif lang == 'ta':
+            font = ImageFont.truetype(os.path.join(current_dir, "NotoSansTamil-Bold.ttf"), font_size)
+        elif lang in ['hi', 'te', 'ml']:
+            # Try Windows font first, then fall back to default
+            nirmala = r"C:\Windows\Fonts\nirmala.ttf"
+            if os.path.exists(nirmala):
+                font = ImageFont.truetype(nirmala, font_size)
+            else:
+                font = ImageFont.load_default()
+        else:
+            # Try bundled Google Sans, then Windows font, then default
+            sans = os.path.join(current_dir, "Google_Sans_Flex", "static", "GoogleSansFlex_36pt-Bold.ttf")
+            segoe = r"C:\Windows\Fonts\segoeui.ttf"
+            if os.path.exists(sans):
+                font = ImageFont.truetype(sans, font_size)
+            elif os.path.exists(segoe):
+                font = ImageFont.truetype(segoe, font_size)
+            else:
+                font = ImageFont.load_default()
+    except:
+        font = ImageFont.load_default()
+
+    # Limit subtitle width
+    max_width = int(video_width * 0.8)
+
+    # Wrap text if too long
     words = text.split()
-    if not words:
-        return []
-        
-    # Group words into chunks of ~4-5 words
-    chunks = []
-    chunk = []
+    lines = []
+    line = ""
+
     for word in words:
-        chunk.append(word)
-        if len(chunk) >= 5:
-            chunks.append(" ".join(chunk))
-            chunk = []
-    if chunk:
-        chunks.append(" ".join(chunk))
-        
-    # Calculate time per character to estimate subtitle synced timings
-    num_chars = sum(len(c) for c in chunks)
-    time_per_char = duration / max(1, num_chars)
-    
+        test_line = f"{line} {word}".strip()
+        bbox = draw.textbbox((0, 0), test_line, font=font)
+        width = bbox[2] - bbox[0]
+
+        if width <= max_width:
+            line = test_line
+        else:
+            lines.append(line)
+            line = word
+
+    lines.append(line)
+
+    total_text_height = len(lines) * (font_size + 5)
+    y = (canvas_height - total_text_height) / 2
+
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        text_w = bbox[2] - bbox[0]
+        x = (video_width - text_w) / 2
+
+        # outline
+        for ox in [-2, 2]:
+            for oy in [-2, 2]:
+                draw.text((x+ox, y+oy), line, font=font, fill=(0,0,0,255))
+
+        draw.text((x, y), line, font=font, fill=(255,255,255,255))
+
+        y += font_size + 5
+
+    img_array = np.array(img)
+
+    return ImageClip(img_array).with_duration(duration)
+
+def _create_subtitle_clips(text, duration, video_w, video_h, lang='en'):
+    """Create subtitle clips from text."""
+
+    # Split by sentence (better than 5 word chunks)
+    chunks = [s.strip() for s in text.split('.') if s.strip()]
+
+    if not chunks:
+        return []
+
+    time_per_chunk = duration / len(chunks)
+
     subs = []
     current_time = 0
+
     for chunk_text in chunks:
-        chunk_duration = len(chunk_text) * time_per_char
-        try:
-            subtitle = TextClip(
-                text=chunk_text,
-                font_size=45,
-                color='white',
-                stroke_color='black',
-                stroke_width=2.5,
-                method='caption',
-                align='center',
-                size=(int(video_w * 0.8), None),
-            ).with_duration(chunk_duration).with_position(('center', int(video_h * 0.8)))
-            subs.append(subtitle)
-        except Exception as e:
-            print(f"⚠️ TextClip subtitle chunk creation failed: {e}")
-        current_time += chunk_duration
-        
+
+        txt_clip = _create_subtitle_image(
+            chunk_text,
+            video_w,
+            time_per_chunk,
+            lang
+        )
+
+        txt_clip = (
+            txt_clip
+            .with_start(current_time)
+            .with_position(('center', video_h - 140))
+        )
+
+        subs.append(txt_clip)
+
+        current_time += time_per_chunk
+
     return subs
+# ──────────────────────────────────────────────────────────────────────────────
 
 def _loop_video_to_duration(video_clip, target_duration):
     """Loops or trims a video clip to exactly match target_duration."""
@@ -183,12 +214,9 @@ def _loop_video_to_duration(video_clip, target_duration):
         start_time = max(0, (video_clip.duration - target_duration) / 2)
         return video_clip.subclipped(start_time, start_time + target_duration)
     
-    # Need to loop if it's too short
     loops_needed = math.ceil(target_duration / video_clip.duration)
     looped = concatenate_videoclips([video_clip] * loops_needed, method="compose")
     return looped.subclipped(0, target_duration)
-
-
 
 # ==========================================
 # ✂️ STANDARD ENGINE (Montage Mode + Subtitles + Voice)
@@ -203,7 +231,7 @@ def build_video(video_paths, script_text, voice_choice='male', lang='en'):
         os.makedirs(media_folder, exist_ok=True)
         audio_path = os.path.join(media_folder, "temp_voice.mp3")
 
-        # 1. Generate Voiceover (ElevenLabs → gTTS fallback)
+        # 1. Generate Voiceover
         print("🗣️ Generating voiceover...")
         used_engine = "ElevenLabs"
         if not _tts_elevenlabs(script_text, audio_path, voice_choice):
@@ -228,11 +256,13 @@ def build_video(video_paths, script_text, voice_choice='male', lang='en'):
 
         stitched_video = concatenate_videoclips(clips, method="compose")
 
-        # 3. Subtitle Overlay
-        subtitle_clips = _create_subtitle_clips(script_text, total_audio_duration, stitched_video.w, stitched_video.h)
+        # 3. Subtitle Overlay using Pure Python Engine
+        subtitle_clips = _create_subtitle_clips(script_text, total_audio_duration, stitched_video.w, stitched_video.h, lang)
         if subtitle_clips:
-            print(f"📝 Adding {len(subtitle_clips)} subtitle chunks overlay...")
-            final_video = CompositeVideoClip([stitched_video] + subtitle_clips).with_audio(voice_clip)
+            print(f"📝 Adding {len(subtitle_clips)} dynamic subtitle chunks overlay...")
+            final_video = CompositeVideoClip(
+                [stitched_video] + subtitle_clips
+            ).with_audio(voice_clip).with_duration(total_audio_duration)
         else:
             final_video = stitched_video.with_audio(voice_clip).with_duration(total_audio_duration)
 
@@ -257,7 +287,6 @@ def build_video(video_paths, script_text, voice_choice='male', lang='en'):
         traceback.print_exc()
         return None, None
 
-
 # ==========================================
 # 🚀 PROMO ENGINE (Photos + Music + Voice)
 # ==========================================
@@ -269,18 +298,15 @@ def _animate_photo_locally(photo_path, duration):
     w, h = clip.size
     return CompositeVideoClip([zoomed_clip.with_position('center')], size=(w, h))
 
-
 def _loop_audio_to_duration(audio_clip, target_duration):
     """Loops or trims an audio clip to exactly match target_duration."""
     import math
     from moviepy import concatenate_audioclips
     if audio_clip.duration >= target_duration:
         return audio_clip.subclipped(0, target_duration)
-    # Need to loop
     loops_needed = math.ceil(target_duration / audio_clip.duration)
     looped = concatenate_audioclips([audio_clip] * loops_needed)
     return looped.subclipped(0, target_duration)
-
 
 def build_promo_video(photo_paths, bg_music_path, script_text, voice_choice='male', lang='en'):
     """Promo engine: animated photos + background music + AI voiceover."""
@@ -304,26 +330,22 @@ def build_promo_video(photo_paths, bg_music_path, script_text, voice_choice='mal
         voice_clip = AudioFileClip(audio_path)
         total_duration = voice_clip.duration
 
-        # 2. Smart Audio Mixing — loop bg music if shorter than voiceover
         print("🎵 Mixing audio tracks...")
         bg_music_raw = AudioFileClip(bg_music_path)
         bg_music = _loop_audio_to_duration(bg_music_raw, total_duration).with_volume_scaled(0.1)
         final_audio = CompositeAudioClip([bg_music, voice_clip])
 
-        # 3. Animate Photos
         print("📸 Animating photos...")
         time_per_photo = total_duration / len(photo_paths)
         image_clips = [_animate_photo_locally(p, time_per_photo) for p in photo_paths]
 
         final_video = concatenate_videoclips(image_clips, method="compose").with_audio(final_audio)
 
-        # 4. Export
         output_filename = "final_promo_output.mp4"
         output_path = os.path.join(media_folder, output_filename)
         print("⏳ Rendering Promo Video...")
         final_video.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac")
 
-        # 5. Cleanup
         voice_clip.close()
         bg_music_raw.close()
         final_video.close()
